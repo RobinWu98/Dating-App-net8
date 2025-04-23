@@ -1,0 +1,195 @@
+Github repository: 
+这是一个.Net + Angular 的全栈项目，部署在Azure
+数据库是sqlite + entity（ORM
+dbcontext
+注册service到Program.cs包括数据库，controller
+DI 容器是一个 自动帮你创建对象并管理它们生命周期的“服务工厂”。
+
+//////////////////////////////////////////////////
+
+在 ASP.NET Core 中，所有服务（包括数据库上下文、日志系统、配置项等）都可以注册到 DI 容器，然后你在别的地方直接“要”就可以了，不用自己 new。
+
+//////////////////////////////////////////////////
+
+✅ 整体流程总结（项目启动后）
+注册：
+Program.cs 注册了 DataContext，告诉 ASP.NET Core 如何连接数据库。
+
+请求进来：
+
+控制器或服务中通过构造函数自动注入了 DataContext。
+
+操作数据库：
+
+使用 _context.Users.Add()、.ToList() 等方法直接操作数据库。
+
+执行 SQL：
+
+EF Core 在底层将这些操作转换成 SQL，然后通过连接字符串连到数据库执行。
+
+返回结果：
+
+把查询或操作结果返回给前端
+
+//////////////////////////////////////////////////
+
+DataContext 是 你定义的数据库操作“代理”类，它本身不包含数据库，而是通过 EF Core 控制和操作数据库的中介桥梁。
+把数据库当成一个 仓库，你要管理货物（数据）；
+
+DataContext 就像一个 仓库管理员，你告诉他：
+
+“帮我查一下用户” → 他用 LINQ 生成 SQL 查；
+
+“新增一个订单” → 他记录状态，最终一起提交；
+
+“保存改动” → 他打包 SQL，发给数据库执行。
+
+//////////////////////////////////////////////////
+
+平台	包管理工具
+JavaScript	npm
+Python	pip
+Java	Maven / Gradle
+Rust	cargo
+.NET / C#	✅ NuGet
+
+//////////////////////////////////////////////////
+
+Migration 是 EF Core 用来自动生成和同步数据库结构变更的工具，能让你的代码和数据库保持一致，避免手动写 SQL 的繁琐和出错。
+
+//////////////////////////////////////////////////
+
+private变量前加_ 比如 private String _name
+然后in class的调用都是调用 _name
+
+//////////////////////////////////////////////////
+
+var 是 C# 的类型自动推导机制，用来简化代码书写，但类型在编译期就确定，不是动态类型！
+// 显式写法
+Dictionary<string, List<int>> dict = new Dictionary<string, List<int>>();
+
+// 使用 var
+var dict = new Dictionary<string, List<int>>(); // 清爽很多
+
+就是var省去了左边的定义比如 int，string。但是后面的赋值部分要一开始就有,也就是有供语言自动推导的内容
+不能 var name; name = "Robin"
+//////////////////////////////////////////////////
+
+✅ ActionResult<T> 是什么？
+它是 ASP.NET Core 控制器中用于返回 HTTP 响应 的封装类型，支持：
+
+返回数据（如 JSON）
+
+返回状态码（200 OK、404 NotFound 等）
+public ActionResult<AppUser> GetUser() // 意味着你可以返回：
+return user;        // 正常数据（会被序列化为 JSON）
+return NotFound();  // HTTP 404 状态码
+return BadRequest();
+
+//////////////////////////////////////////////////
+
+✅ IEnumerable<T> 是什么？
+是 .NET 中所有“可枚举集合”的接口
+
+可以被 foreach 遍历
+
+是 List<T>、Array、HashSet 等集合的“父接口”
+📌 所以你可以理解为：只要是“集合”，几乎都可以被当作 IEnumerable 使用
+
+//////////////////////////////////////////////////
+
+NET 是怎么处理 HTTP 请求并与 Controller 协作的？
+浏览器发起 GET 请求 -> ASP.NET Core 的 WebServer (Kestrel) 接收请求 ->
+  路由系统分析路径 /api/users
+    ↓
+  找到对应的控制器 UsersController 和 [HttpGet] 方法
+    ↓
+  自动执行这个方法，把返回值转为 HTTP 响应
+    ↓
+  返回 JSON 给浏览器或前端
+api/[controller] 会自动变成 api/users，因为类名叫 UsersController
+
+[HttpGet("{id}")] 绑定了一个参数化路径：/api/users/1 就会调用这个方法
+
+.NET Core 自动帮你把路径、参数、请求体等都匹配到方法和参数上。
+
+//////////////////////////////////////////////////
+
+ControllerBase 是 ASP.NET Core 提供的基类，提供了许多 Web API 常用方法：
+
+方法	作用
+Ok()	返回 200 状态码
+NotFound()	返回 404
+BadRequest()	返回 400
+Created()	返回 201，创建资源成功
+ModelState	验证请求数据是否合法
+所以你要写 Web API，继承它是最标准的做法。
+
+//////////////////////////////////////////////////
+
+dotnet watch 是什么？
+dotnet watch 是一个命令行工具，用于开发时 自动重新编译和运行你的项目，当你改动代码时会自动重启。
+
+//////////////////////////////////////////////////
+
+浏览器请求: GET /api/users/1
+        ↓
+[Route("api/[controller]")] + [HttpGet("{id}")] → 匹配控制器方法
+        ↓
+UsersController(DataContext context) 被注入并执行
+        ↓
+context.Users.Find(id) → 从数据库取出对象
+        ↓
+return user / return NotFound()
+        ↓
+ASP.NET Core 封装为 HTTP 响应
+
+//////////////////////////////////////////////////
+
+async 是什么意思？
+它修饰一个方法，表示 这个方法是异步的；
+
+异步方法可以用 await 来等待耗时操作完成（比如访问数据库）；
+
+方法返回一个 Task 类型。
+
+await 是干什么的？
+等待一个异步操作完成
+
+等待时会把当前线程释放出来，去干别的事（比如处理其他请求）
+
+完成后再恢复继续执行这个方法，不阻塞线程，不卡死主程序
+
+同步：
+┌──────┐
+│ 请求1│ ← 查询中...线程被占用
+├──────┤
+│ 请求2│ ← 查询中...线程被占用
+├──────┤
+│ 请求3│ ← 查询中...线程被占用
+└──────┘
+
+异步：
+┌──────┐
+│ 请求1│ → 查询 → 暂停（线程空闲） → 结果回调 → 返回
+├──────┤
+│ 请求2│ → 查询 → 暂停（线程空闲） → 结果回调 → 返回
+├──────┤
+│ 请求3│ → 查询 → 暂停（线程空闲） → 结果回调 → 返回
+└──────┘
+
+//////////////////////////////////////////////////
+
+var users = await context.Users.ToListAsync();
+实际流程如下：
+
+1. 创建 DbCommand
+2. 调用 ExecuteReaderAsync() 发起查询
+3. 方法挂起，注册 continuation（回调）
+4. I/O 线程监听数据库返回数据
+5. 数据到达后，Task 标记为 Completed
+6. TaskScheduler 调用回调，恢复 async 方法上下文
+7. users 赋值完成，继续执行 return users;
+
+//////////////////////////////////////////////////
+
